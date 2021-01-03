@@ -46,15 +46,15 @@ sigma = tf.get_variable(name="sigma", shape = [m * n], initializer=tf.random_nor
 w = tf.get_variable(name="w", shape= [1, m], initializer=tf.random_normal_initializer(0, 1))
 
 rula = tf.reduce_prod(tf.reshape(tf.exp( -0.5* ((tf.tile(X_train_t, (1, m))- mu)**2) / (sigma**2)),
-               (-1, m, n)), axis=2)  # rule activations
-Y_train_t = tf.reduce_sum(rula*w,axis=1) / tf.clip_by_value(tf.reduce_sum(rula,axis=1), 1e-8, 1e8)  # Fuzzy base expansion
+               (-1, m, n)), axis=2)  #activations
+Y_train_t = tf.reduce_sum(rula*w,axis=1) / tf.clip_by_value(tf.reduce_sum(rula,axis=1), 1e-8, 1e8)
 
 
-#loss = tf.losses.log_loss(y_train, Y_train)  # Loss function computation
-loss = tf.losses.sigmoid_cross_entropy(y_train_t, Y_train_t)  # Loss function computation
+#loss = tf.losses.log_loss(y_train, Y_train)  # loss function
+loss = tf.losses.sigmoid_cross_entropy(y_train_t, Y_train_t)  # loss function
 #loss = tf.sqrt(tf.losses.mean_squared_error(y_train, Y_train))
 
-optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss)  # Optimization step
+optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss)  # optimizer
 # optimizer = tf.train.RMSPropOptimizer(learning_rate=learning_rate).minimize(loss)
 # optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(loss)
 
@@ -64,9 +64,9 @@ optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss)  
 X_test_t = tf.placeholder(tf.float32, shape=[None, n]) # Test input
 y_test_t = tf.placeholder(tf.float32, shape=None)  # Train output
 rula_test = tf.reduce_prod(tf.reshape(tf.exp( -0.5* ((tf.tile(X_test_t, (1, m))- mu)**2) / (sigma**2)),
-               (-1, m, n)), axis=2)  # rule activations
-Y_test_t = tf.reduce_sum(rula_test*w,axis=1) / tf.clip_by_value(tf.reduce_sum(rula_test,axis=1), 1e-8, 1e8)  # Fuzzy base expansion
-loss_test = tf.losses.sigmoid_cross_entropy(y_test_t, Y_test_t)  # Loss function computation
+               (-1, m, n)), axis=2)  # rule activation
+Y_test_t = tf.reduce_sum(rula_test*w,axis=1) / tf.clip_by_value(tf.reduce_sum(rula_test,axis=1), 1e-8, 1e8)
+loss_test = tf.losses.sigmoid_cross_entropy(y_test_t, Y_test_t)  # loss function
 
 ################################ start session
 x_axis = []
