@@ -3,12 +3,15 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 import pandas as pd
-from sklearn.metrics import accuracy_score,f1_score
+from sklearn.metrics import accuracy_score,f1_score,recall_score,precision_score
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import ConfusionMatrixDisplay
+
 
 import time,os ## for savefig
 dir_ = str(time.time())
 os.mkdir(dir_)
-print("\n\n\n\n")
+print("\n\n\n\n["+dir_+"] >>>>>>>>>>>>>")
 
 ## read and process dataset
 df = pd.read_csv("data.csv")
@@ -17,8 +20,14 @@ y = df["Outcome"].to_numpy()
 #X = df.drop(["Outcome"], axis = 1).drop(["Pregnancies"], axis = 1).drop(["Age"], axis = 1).to_numpy()
 X = df.drop(["Outcome"], axis = 1).drop(["Pregnancies"], axis = 1).to_numpy()
 X_train, X_test, y_train, y_test = train_test_split(X,y, test_size=0.16, random_state = 2021, stratify=y)
-print(y_test) ### debug print
+# print(y_test) ### debug print
 
+## get counts
+unique, counts = np.unique(y_train, return_counts=True)
+print("Train:  ",dict(zip(unique, counts)))
+
+unique, counts = np.unique(y_test, return_counts=True)
+print("Test:  ",dict(zip(unique, counts)))
 
 ## settings
 n = X_train.shape[1] # no of input features
@@ -64,6 +73,8 @@ x_axis = []
 tr_loss, te_loss = [],[]
 tr_acc, te_acc = [], []
 tr_f1, te_f1 = [], []
+tr_prec, te_prec = [], []
+tr_rec, te_rec = [], []
 init=tf.global_variables_initializer()
 with tf.Session() as sess:
 	sess.run(init)
@@ -78,27 +89,56 @@ with tf.Session() as sess:
 			tr_loss.append(loss_tr)
 			te_loss.append(loss_te)
 
-			acc_tr = accuracy_score(y_train,np.where(Y_train > 0, 1, 0))
-			acc_te = accuracy_score(y_test,np.where(Y_test > 0, 1, 0))
+			Y_train = np.where(Y_train > 0, 1, 0)
+			Y_test = np.where(Y_test > 0, 1, 0)
 
-			f1_tr = f1_score(y_train,np.where(Y_train > 0, 1, 0))
-			f1_te = f1_score(y_test,np.where(Y_test > 0, 1, 0))
+			acc_tr = accuracy_score(y_train,Y_train)
+			acc_te = accuracy_score(y_test,Y_test)
+
+			f1_tr = f1_score(y_train,Y_train)
+			f1_te = f1_score(y_test,Y_test)
+
+			prec_tr = precision_score(y_train,Y_train)
+			prec_te = precision_score(y_test,Y_test)
+
+			rec_tr = recall_score(y_train,Y_train)
+			rec_te = recall_score(y_test,Y_test)
 
 			tr_acc.append(acc_tr)
 			te_acc.append(acc_te)
 			tr_f1.append(f1_tr)
-			te_f1.append(f1_te)		
+			te_f1.append(f1_te)	
+			tr_prec.append(prec_tr)
+			te_prec.append(prec_te)
+			tr_rec.append(rec_tr)
+			te_rec.append(rec_te)
 
-		if (e+1) % 100 == 0:
-		    print("train loss @ epoch %i: %f" % (e+1, loss_tr))
-		    print("test loss @ epoch %i: %f" % (e+1, loss_te))
-		    print(np.where(Y_test > 0, 1, 0)) ### debug print
-		    print("test accuracy:",acc_te)
-		    print("train accuracy:",acc_tr)
-		    print("test f1:", f1_te)
-		    print("train f1",f1_tr)
-		
+		if (e+1) % 200 == 0:
+			print("Epoch ",e+1,">>>>>>>>>>>>>")
+			#print(Y_test) ### debug print
+			print("loss      >>>","test:", loss_te,"\t\t train:",loss_tr)
+			print("accuracy  >>>","test:", acc_te,"\t train:",acc_tr)
+			print("f1-score  >>>","test:", f1_te,"\t train:",f1_tr)
+			print("precision >>>","test:", prec_te,"\t train:",prec_tr)
+			print("recall    >>>","test:", rec_te,"\t train:",rec_tr)
+			print()
+
+			cm_test = confusion_matrix(y_test, Y_test)
+			cm_train = confusion_matrix(y_train, Y_train)
 	
+			plt.figure(int(str(e+1)+'1'))
+			disp = ConfusionMatrixDisplay(confusion_matrix=cm_test,display_labels=["Not Diabetic","Diabetic"])
+			disp = disp.plot()
+			#plt.show()
+			plt.savefig(dir_+"/cf_test-epoch"+str(e+1)+".png",transparent=True)
+
+			plt.figure(int(str(e+1)+'2'))
+			disp = ConfusionMatrixDisplay(confusion_matrix=cm_train,display_labels=["Not Diabetic","Diabetic"])
+			disp = disp.plot()
+			#plt.show()
+			plt.savefig(dir_+"/cf_train-epoch"+str(e+1)+".png",transparent=True)
+
+
 	# plot accuracy
 	plt.figure(1)
 	plt.plot(x_axis,tr_acc,label="Train")
@@ -121,6 +161,26 @@ with tf.Session() as sess:
 	plt.savefig(dir_+"/f1.png",transparent=True)
 
 	plt.figure(3)
+	plt.plot(x_axis,tr_prec,label="Train")
+	plt.plot(x_axis,te_prec,label="Test")
+	plt.xlabel('Epochs')
+	plt.ylabel('Precision')
+	plt.title('Precision over Epochs')
+	plt.legend()
+	#plt.show()
+	plt.savefig(dir_+"/precision.png",transparent=True)
+
+	plt.figure(4)
+	plt.plot(x_axis,tr_rec,label="Train")
+	plt.plot(x_axis,te_rec,label="Test")
+	plt.xlabel('Epochs')
+	plt.ylabel('Recall')
+	plt.title('Recall over Epochs')
+	plt.legend()
+	#plt.show()
+	plt.savefig(dir_+"/recall.png",transparent=True)
+
+	plt.figure(5)
 	plt.plot(x_axis,tr_loss,label="Train")
 	plt.plot(x_axis,te_loss,label="Test")
 	plt.xlabel('Epochs')
@@ -130,36 +190,14 @@ with tf.Session() as sess:
 	#plt.show()
 	plt.savefig(dir_+"/loss.png",transparent=True)
 
-	"""
-    # Plot real vs. predicted
-    pred = np.vstack((np.expand_dims(trn_pred, 1), np.expand_dims(val_pred, 1)))
-    plt.figure(1)
-    #plt.plot(mg_series)
-    plt.plot(pred)
-
-	# Plot the cost over epochs
-	plt.figure(2)
-	plt.subplot(2, 1, 1)
-	plt.plot(np.squeeze(trn_costs))
-	plt.title("Training loss, Learning rate =" + str(alpha))
-	plt.subplot(2, 1, 2)
-	plt.plot(np.squeeze(val_costs))
-	plt.title("Validation loss, Learning rate =" + str(alpha))
-	plt.ylabel('Cost')
-	plt.xlabel('Epochs')
-	# Plot resulting membership functions
-	fis.plotmfs(sess)
-	# plt.show()
-	"""
-
 	mu_fin = sess.run(mu)
 	mu_fin = np.reshape(mu_fin, (m, n))
 	sigma_fin = sess.run(sigma)
 	sigma_fin = np.reshape(sigma_fin, (m,n))
 	w_fin = sess.run(w)
-	x_axis_mf = np.linspace(-2, 2, 1000)
+	x_axis_mf = np.linspace(-4, 4, 1000)
 	for r in range(m):
-		plt.figure(r+4)
+		plt.figure(r+6)
 		plt.title("Rule %d, MF for each feature [ %f ]" % ((r + 1), w_fin[0, r]))
 		for i in range(n):
 			plt.plot(x_axis_mf, np.exp(-0.5 * ((x_axis_mf - mu_fin[r, i]) ** 2) / (sigma_fin[r, i] ** 2)))
